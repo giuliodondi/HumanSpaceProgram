@@ -1,6 +1,7 @@
 ﻿using HSP.ControlSystems;
 using HSP.ControlSystems.Controls;
 using HSP.Input;
+using HSP.Vanilla.Tools;
 using UnityEngine;
 using UnityPlus.Input;
 using UnityPlus.Serialization;
@@ -44,6 +45,8 @@ namespace HSP.Vanilla.Components
         [NamedControl( "Translation" )]
         public ControllerOutput<Vector3> OnSetTranslation = new();
 
+        private GameObject _attitudeArrow;
+
         void OnEnable()
         {
             HierarchicalInputManager.AddAction( InputChannel.GAMEPLAY_CONTROL_PITCH, InputChannelPriority.MEDIUM, Input_Pitch );
@@ -52,6 +55,8 @@ namespace HSP.Vanilla.Components
 
             HierarchicalInputManager.AddAction( InputChannel.GAMEPLAY_CONTROL_THROTTLE_MAX, InputChannelPriority.MEDIUM, Input_FullThrottle );
             HierarchicalInputManager.AddAction( InputChannel.GAMEPLAY_CONTROL_THROTTLE_MIN, InputChannelPriority.MEDIUM, Input_CutThrottle );
+
+            _attitudeArrow = ArrowHelper.CreateArrow("input_dbg", transform.position, new Vector3( 10, 0, 0), ControlFrame, transform, Color.cyan );
         }
 
         void OnDisable()
@@ -62,6 +67,11 @@ namespace HSP.Vanilla.Components
 
             HierarchicalInputManager.RemoveAction( InputChannel.GAMEPLAY_CONTROL_THROTTLE_MAX, Input_FullThrottle );
             HierarchicalInputManager.RemoveAction( InputChannel.GAMEPLAY_CONTROL_THROTTLE_MIN, Input_CutThrottle );
+
+            if( _attitudeArrow != null )
+            {
+                GameObject.Destroy( _attitudeArrow );
+            }
         }
 
         private bool Input_FullThrottle( float value )
@@ -88,8 +98,7 @@ namespace HSP.Vanilla.Components
 
             if( Mathf.Abs( _pitchSignal ) > 0.01f || controlSignal != _lastControlSignal )
             {
-                OnSetAttitude.TrySendSignal( controlSignal );
-                _lastControlSignal = controlSignal;
+                sendSignal( controlSignal );
             }
 
             return false;
@@ -103,8 +112,7 @@ namespace HSP.Vanilla.Components
 
             if( Mathf.Abs( _yawSignal ) > 0.01f || controlSignal != _lastControlSignal )
             {
-                OnSetAttitude.TrySendSignal( controlSignal );
-                _lastControlSignal = controlSignal;
+                sendSignal( controlSignal );
             }
             return false;
         }
@@ -117,10 +125,17 @@ namespace HSP.Vanilla.Components
 
             if( Mathf.Abs( _rollSignal ) > 0.01f || controlSignal != _lastControlSignal )
             {
-                OnSetAttitude.TrySendSignal( controlSignal );
-                _lastControlSignal = controlSignal;
+                sendSignal( controlSignal );
             }
             return false;
+        }
+
+        void sendSignal(Vector3 newSignal )
+        {
+            OnSetAttitude.TrySendSignal( newSignal );
+            _lastControlSignal = newSignal;
+
+            ArrowHelper.UpdateArrowDirection( _attitudeArrow, newSignal * 10 );
         }
 
 
